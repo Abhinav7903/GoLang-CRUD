@@ -36,59 +36,59 @@ func init() {
 
 }
 
-func insertOne(movie model.Netflix){
-	inserted,err:=collection.InsertOne(context.Background(),movie)
-	if err!=nil{
+func insertOne(movie model.Netflix) {
+	inserted, err := collection.InsertOne(context.Background(), movie)
+	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Inserted one movie with id: ",inserted.InsertedID)
+	fmt.Println("Inserted one movie with id: ", inserted.InsertedID)
 }
 
-func updateone(movieId string){
-	id,_:=primitive.ObjectIDFromHex(movieId)
-	filter:=bson.M{"_id":id}
-	update:=bson.M{"$set":bson.M{"watched":true}}
-	result,err:=collection.UpdateOne(context.Background(),filter,update)
-	if err!=nil{
+func updateone(movieId string) {
+	id, _ := primitive.ObjectIDFromHex(movieId)
+	filter := bson.M{"_id": id}
+	update := bson.M{"$set": bson.M{"watched": true}}
+	result, err := collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Updated one movie with id: ",result.ModifiedCount)
+	fmt.Println("Updated one movie with id: ", result.ModifiedCount)
 
 }
 
-func deleteone(movieId string){
-	id,_:=primitive.ObjectIDFromHex(movieId)
-	filter:=bson.M{"_id":id}
-	result,err:=collection.DeleteOne(context.Background(),filter)
-	if err!=nil{
+func deleteone(movieId string) {
+	id, _ := primitive.ObjectIDFromHex(movieId)
+	filter := bson.M{"_id": id}
+	result, err := collection.DeleteOne(context.Background(), filter)
+	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Deleted one movie with id: ",result.DeletedCount)
+	fmt.Println("Deleted one movie with id: ", result.DeletedCount)
 }
 
-func deleteAll() int64{
-	result,err:=collection.DeleteMany(context.Background(),bson.D{{}},nil)
-	if err!=nil{
+func deleteAll() int64 {
+	result, err := collection.DeleteMany(context.Background(), bson.D{{}}, nil)
+	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Deleted all movies with count: ",result.DeletedCount)
+	fmt.Println("Deleted all movies with count: ", result.DeletedCount)
 	return result.DeletedCount
 }
 
-func getAllMovie() []primitive.M{
-	cursor,err:=collection.Find(context.Background(),bson.D{{}})
-	if err!=nil{
+func getAllMovie() []primitive.M {
+	cursor, err := collection.Find(context.Background(), bson.D{{}})
+	if err != nil {
 		log.Fatal(err)
 	}
 	var movies []primitive.M
-	for cursor.Next(context.Background()){
+	for cursor.Next(context.Background()) {
 		var movie bson.M
-		err:=cursor.Decode(&movie)
-		if err!=nil{
+		err := cursor.Decode(&movie)
+		if err != nil {
 			log.Fatal(err)
 		}
 
-		movies=append(movies,movie)
+		movies = append(movies, movie)
 	}
 
 	defer cursor.Close(context.Background())
@@ -96,48 +96,57 @@ func getAllMovie() []primitive.M{
 
 }
 
-func GetMyAllMovies(w http.ResponseWriter,r *http.Request){
-	w.Header().Set("Content-Type","application/x-www-form-urlencoded")
-	movies:=getAllMovie()
+func GetMyAllMovies(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	movies := getAllMovie()
 	fmt.Println(movies)
-	json.NewEncoder(w).Encode(movies)
-	
+	w.Write([]byte("<h1>My Netflix Watchlist</h1>"))
+
+	// Iterate over the movies and write their details in HTML format
+	for _, movie := range movies {
+		w.Write([]byte("<h3>" + movie["movie"].(string) + "</h3>"))
+		w.Write([]byte("<p>Year: " + fmt.Sprint(movie["year"]) + "</p>"))
+		w.Write([]byte("<p>Watched: " + fmt.Sprint(movie["watched"]) + "</p>"))
+		w.Write([]byte("<hr>"))
+	}
+	fmt.Println("Endpoint Hit: GetMyAllMovies")
 }
 
-func CreateMovie(w http.ResponseWriter,r *http.Request){
-	w.Header().Set("Content-Type","application/x-www-form-urlencoded")
-	w.Header().Set("Access-Control-Allow-Methods","POST")
+func CreateMovie(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
 
 	var movie model.Netflix
+
 	_ = json.NewDecoder(r.Body).Decode(&movie)
 	insertOne(movie)
 	json.NewEncoder(w).Encode(movie)
 }
 
-func MarksAsWatched(w http.ResponseWriter,r *http.Request){
-	w.Header().Set("Content-Type","application/x-www-form-urlencoded")
-	w.Header().Set("Access-Control-Allow-Methods","PUT")
+func MarksAsWatched(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/x-www-form-urlencoded")
+	w.Header().Set("Access-Control-Allow-Methods", "PUT")
 
-	params:=mux.Vars(r)
+	params := mux.Vars(r)
 	updateone(params["id"])
 	json.NewEncoder(w).Encode(params["id"])
 
 }
 
-func DeleteMovie(w http.ResponseWriter,r *http.Request){
-	w.Header().Set("Content-Type","application/x-www-form-urlencoded")
-	w.Header().Set("Access-Control-Allow-Methods","DELETE")
+func DeleteMovie(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/x-www-form-urlencoded")
+	w.Header().Set("Access-Control-Allow-Methods", "DELETE")
 
-	params:=mux.Vars(r)
+	params := mux.Vars(r)
 	deleteone(params["id"])
 	json.NewEncoder(w).Encode(params["id"])
 }
 
-func DeleteAllMovie(w http.ResponseWriter,r *http.Request){
-	w.Header().Set("Content-Type","application/x-www-form-urlencoded")
-	w.Header().Set("Access-Control-Allow-Methods","DELETE")
+func DeleteAllMovie(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/x-www-form-urlencoded")
+	w.Header().Set("Access-Control-Allow-Methods", "DELETE")
 
-	count:=deleteAll()
+	count := deleteAll()
 	json.NewEncoder(w).Encode(count)
-	
+
 }
